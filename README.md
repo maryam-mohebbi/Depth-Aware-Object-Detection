@@ -9,11 +9,14 @@ curl -sSL https://install.python-poetry.org | python3 -
 poetry install
 ```
 
-## you can then active the env by:
+## You can then active the env by:
 ```
 poetry shell
 ```
 
 ## You need to install this extentions also:
 Mypy Type Checker
+
 Ruff
+
+## project need to be in the `da-od` folder
