@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Depth-Aware Object Detection for Autonomous Urban Navigation"
 authors = ["Maryam Mohebbi <maryam.mohebbi.2@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "da-od" }]
+packages = [{ include = "da_od" }]
 
 [tool.poetry.dependencies]
 python = "3.10.10"
