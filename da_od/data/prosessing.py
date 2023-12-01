@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -12,6 +13,8 @@ from PIL import Image
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
+
+from da_od.config import annotation_path, image_path
 
 
 class BoundingBoxUtility:
@@ -32,8 +35,8 @@ class BoundingBoxUtility:
 class CityscapesDataset(Dataset):
     def __init__(
         self,
-        image_dir: str,
-        annotation_dir: str,
+        image_dir: Path,
+        annotation_dir: Path,
         transforms: torchvision.transforms.Compose | None = None,
     ):
         self.image_dir = image_dir
@@ -100,8 +103,8 @@ class ImageDisplayUtility:
 # Main execution block
 data_transforms = transforms.Compose([transforms.ToTensor()])
 dataset = CityscapesDataset(
-    image_dir="/Users/maryam/projects/depth-aware-object-detection/data/leftImg8bit_trainvaltest/leftImg8bit/train/aachen",
-    annotation_dir="/Users/maryam/projects/depth-aware-object-detection/data/gtFine_trainvaltest/gtFine/train/aachen",
+    image_dir=image_path / "train/aachen",
+    annotation_dir=annotation_path / "train/aachen",
     transforms=data_transforms,
 )
 
