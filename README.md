@@ -19,4 +19,4 @@ Mypy Type Checker
 
 Ruff
 
-## project need to be in the `da-od` folder
+## project need to be in the `da_od` folder
