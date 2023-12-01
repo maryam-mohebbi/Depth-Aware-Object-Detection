@@ -28,6 +28,7 @@ ipywidgets = "^8.1.1"
 SQLAlchemy = "^2.0.22"
 tensorflow = "^2.15.0"
 keras = ">=2.15.0,<2.16"
+opencv-python = "^4.8.1.78"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.0"
