@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Depth-Aware Object Detection for Autonomous Urban Navigation"
 authors = ["Maryam Mohebbi <maryam.mohebbi.2@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "da-od" }]
+packages = [{ include = "da_od" }]
 
 [tool.poetry.dependencies]
 python = "3.10.10"
@@ -29,6 +29,8 @@ SQLAlchemy = "^2.0.22"
 tensorflow = "^2.15.0"
 keras = ">=2.15.0,<2.16"
 opencv-python = "^4.8.1.78"
+torchvision = "^0.16.1"
+pillow = "^10.1.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.0"
