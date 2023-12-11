@@ -46,6 +46,24 @@ class KittiDatasetProcessor:
                     labels.append(label_data)
         return labels
 
+    def extract_unique_labels(self: KittiDatasetProcessor, label_file: str) -> list[str]:
+        """Extract unique labels from text files in the given directory.
+
+        Args:
+            label_file (str): The directory path containing the text files.
+
+        Returns:
+            list[str]: A list of unique labels.
+        """
+        labels_set = set()
+        path = Path(label_file)
+        for file_path in path.glob("*.txt"):
+            with file_path.open() as file:
+                for line in file:
+                    label = line.split()[0]
+                    labels_set.add(label)
+        return list(labels_set)
+
     def parse_label(self: KittiDatasetProcessor, label_line: str) -> dict[str, object] | None:
         """Parse a single line of label data.
 
@@ -145,6 +163,7 @@ class KittiDatasetProcessor:
 # Example usage
 image_dir = "../../data/data_object_image/training"
 label_dir = "../../data/data_object_label/training"
+lable_list = ["Pedestrian", "Person_sitting", "Car", "DontCare", "Van", "Cyclist", "Tram", "Misc", "Truck"]
 
 processor = KittiDatasetProcessor(image_dir, label_dir)
 image_file = "000045.png"
