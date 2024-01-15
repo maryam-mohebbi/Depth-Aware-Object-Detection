@@ -4385,6 +4385,16 @@ develop = ["colorama", "cython (>=0.29.26)", "cython (>=0.29.28,<3.0.0)", "flake
 docs = ["ipykernel", "jupyter-client", "matplotlib", "nbconvert", "nbformat", "numpydoc", "pandas-datareader", "sphinx"]
 
 [[package]]
+name = "stubs"
+version = "1.0.0"
+description = "Tools for setting up stubs and mocks."
+optional = false
+python-versions = "*"
+files = [
+    {file = "stubs-1.0.0-py3-none-any.whl", hash = "sha256:f328a0f99880b0684db69288dcb104fa93d942df298ddd1659edaa7521415da8"},
+]
+
+[[package]]
 name = "sympy"
 version = "1.12"
 description = "Computer algebra system (CAS) in Python"
@@ -5199,4 +5209,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.10.10"
-content-hash = "710cb5cde4289652ffa58db1e5751242ccb59665549698daff5c58633236af07"
+content-hash = "12274e15eaffccbe853b09daf949ad099a201b6a3d9de55e68c803a40a1537b1"
