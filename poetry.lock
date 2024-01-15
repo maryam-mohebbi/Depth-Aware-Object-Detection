@@ -4874,6 +4874,17 @@ files = [
 ]
 
 [[package]]
+name = "types-six"
+version = "1.16.21.20240106"
+description = "Typing stubs for six"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-six-1.16.21.20240106.tar.gz", hash = "sha256:c83908b4925583e973eb9971ef2bd60dbab647611e10e9cd588d2bef415bfe68"},
+    {file = "types_six-1.16.21.20240106-py3-none-any.whl", hash = "sha256:3658c9e36e9cb003e522655b01b9ca39bd0db61b6383b3e7d0d10d14f873b338"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.8.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
@@ -5209,4 +5220,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.10.10"
-content-hash = "12274e15eaffccbe853b09daf949ad099a201b6a3d9de55e68c803a40a1537b1"
+content-hash = "1c0390538aca80971a5079af08b86bf96c0219cf20ceb5acd970ca978d02f81c"

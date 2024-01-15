@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 import hashlib
-import os
+import logging
+import sys
+import urllib.request
 import zipfile
 from collections import OrderedDict
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import PIL.Image as pil
 import torch
 import torch.nn.functional as F
-from six.moves import urllib
+from PIL import Image
 from torch import nn
 from torch.utils import model_zoo
 from torchvision import models, transforms
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
+# flake8: noqa: N806, N803, N812
 
 
 def disp_to_depth(disp: float, min_depth: float, max_depth: float) -> tuple[float, float]:
@@ -40,6 +47,7 @@ def disp_to_depth(disp: float, min_depth: float, max_depth: float) -> tuple[floa
 def transformation_from_parameters(
     axisangle: torch.Tensor,
     translation: torch.Tensor,
+    *,
     invert: bool = False,
 ) -> torch.Tensor:
     """Convert the network's (axisangle, translation) output into a 4x4 transformation matrix.
@@ -65,12 +73,7 @@ def transformation_from_parameters(
 
     T = get_translation_matrix(t)
 
-    if invert:
-        M = torch.matmul(R, T)
-    else:
-        M = torch.matmul(T, R)
-
-    return M
+    return torch.matmul(R, T) if invert else torch.matmul(T, R)
 
 
 def get_translation_matrix(translation_vector: torch.Tensor) -> torch.Tensor:
@@ -109,7 +112,7 @@ def rot_from_axisangle(vec: torch.Tensor) -> torch.Tensor:
     Returns:
     torch.Tensor: The batch of 4x4 transformation matrices.
     """
-    angle = torch.norm(vec, 2, 2, True)
+    angle = torch.norm(vec, p=2, dim=2, keepdim=True)
     axis = vec / (angle + 1e-7)
 
     ca = torch.cos(angle)
@@ -157,18 +160,18 @@ class ConvBlock(nn.Module):
     nonlin (nn.Module): Non-linear activation layer (ELU).
     """
 
-    def __init__(self, in_channels: int, out_channels: int):
+    def __init__(self: ConvBlock, in_channels: int, out_channels: int) -> None:
         """Initializes the ConvBlock module.
 
         Args:
         in_channels (int): Number of channels in the input.
         out_channels (int): Number of channels produced by the convolution.
         """
-        super(ConvBlock, self).__init__()
+        super().__init__()
         self.conv = Conv3x3(in_channels, out_channels)
         self.nonlin = nn.ELU(inplace=True)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self: ConvBlock, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the ConvBlock.
 
         Args:
@@ -178,8 +181,7 @@ class ConvBlock(nn.Module):
         torch.Tensor: Output tensor after applying convolution and ELU.
         """
         out = self.conv(x)
-        out = self.nonlin(out)
-        return out
+        return self.nonlin(out)
 
 
 class Conv3x3(nn.Module):
@@ -192,22 +194,24 @@ class Conv3x3(nn.Module):
     conv (nn.Conv2d): Convolutional layer.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, use_refl: bool = True):
+    def __init__(self: Conv3x3, in_channels: int, out_channels: int, *, use_refl: bool = True) -> None:
         """Initializes the Conv3x3 module.
 
         Args:
         in_channels (int): Number of channels in the input.
         out_channels (int): Number of channels produced by the convolution.
-        use_refl (bool, optional): Flag to use reflection padding if True, otherwise zero padding. Defaults to True.
+        use_refl (bool, optional): Flag to use reflection padding if True, otherwise zero padding.
+                                   Defaults to True.
         """
-        super(Conv3x3, self).__init__()
+        super().__init__()
+        self.pad: nn.Module  # Specify the type as nn.Module
         if use_refl:
             self.pad = nn.ReflectionPad2d(1)
         else:
             self.pad = nn.ZeroPad2d(1)
-        self.conv = nn.Conv2d(int(in_channels), int(out_channels), 3)
+        self.conv = nn.Conv2d(in_channels, out_channels, 3)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self: Conv3x3, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the Conv3x3.
 
         Args:
@@ -217,8 +221,7 @@ class Conv3x3(nn.Module):
         torch.Tensor: Output tensor after applying padding and convolution.
         """
         out = self.pad(x)
-        out = self.conv(out)
-        return out
+        return self.conv(out)
 
 
 class BackprojectDepth(nn.Module):
@@ -236,7 +239,7 @@ class BackprojectDepth(nn.Module):
     pix_coords (nn.Parameter): Pixel coordinates in homogeneous form.
     """
 
-    def __init__(self, batch_size: int, height: int, width: int):
+    def __init__(self: BackprojectDepth, batch_size: int, height: int, width: int) -> None:
         """Initializes the BackprojectDepth module.
 
         Args:
@@ -244,7 +247,7 @@ class BackprojectDepth(nn.Module):
         height (int): The height of the input images.
         width (int): The width of the input images.
         """
-        super(BackprojectDepth, self).__init__()
+        super().__init__()
 
         self.batch_size = batch_size
         self.height = height
@@ -266,7 +269,7 @@ class BackprojectDepth(nn.Module):
         self.pix_coords = self.pix_coords.repeat(batch_size, 1, 1)
         self.pix_coords = nn.Parameter(torch.cat([self.pix_coords, self.ones], 1), requires_grad=False)
 
-    def forward(self, depth: torch.Tensor, inv_K: torch.Tensor) -> torch.Tensor:
+    def forward(self: BackprojectDepth, depth: torch.Tensor, inv_K: torch.Tensor) -> torch.Tensor:
         """Forward pass of the BackprojectDepth.
 
         Args:
@@ -278,9 +281,7 @@ class BackprojectDepth(nn.Module):
         """
         cam_points = torch.matmul(inv_K[:, :3, :3], self.pix_coords)
         cam_points = depth.view(self.batch_size, 1, -1) * cam_points
-        cam_points = torch.cat([cam_points, self.ones], 1)
-
-        return cam_points
+        return torch.cat([cam_points, self.ones], 1)
 
 
 class Project3D(nn.Module):
@@ -296,7 +297,7 @@ class Project3D(nn.Module):
     eps (float): A small epsilon value to prevent division by zero.
     """
 
-    def __init__(self, batch_size: int, height: int, width: int, eps: float = 1e-7):
+    def __init__(self: Project3D, batch_size: int, height: int, width: int, eps: float = 1e-7) -> None:
         """Initializes the Project3D module.
 
         Args:
@@ -305,13 +306,13 @@ class Project3D(nn.Module):
         width (int): The width of the output image.
         eps (float, optional): A small epsilon value for numerical stability. Defaults to 1e-7.
         """
-        super(Project3D, self).__init__()
+        super().__init__()
         self.batch_size = batch_size
         self.height = height
         self.width = width
         self.eps = eps
 
-    def forward(self, points: torch.Tensor, K: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
+    def forward(self: Project3D, points: torch.Tensor, K: torch.Tensor, T: torch.Tensor) -> torch.Tensor:
         """Forward pass of the Project3D.
 
         Args:
@@ -329,8 +330,7 @@ class Project3D(nn.Module):
         pix_coords = pix_coords.permute(0, 2, 3, 1)
         pix_coords[..., 0] /= self.width - 1
         pix_coords[..., 1] /= self.height - 1
-        pix_coords = (pix_coords - 0.5) * 2
-        return pix_coords
+        return (pix_coords - 0.5) * 2
 
 
 def upsample(x: torch.Tensor) -> torch.Tensor:
@@ -381,14 +381,15 @@ class SSIM(nn.Module):
 
     Attributes:
     mu_x_pool, mu_y_pool (nn.AvgPool2d): Average pooling layers for computing means of x and y.
-    sig_x_pool, sig_y_pool, sig_xy_pool (nn.AvgPool2d): Average pooling layers for computing variances and covariance.
+    sig_x_pool, sig_y_pool, sig_xy_pool (nn.AvgPool2d): Average pooling layers for computing variances and
+                                                        covariance.
     refl (nn.ReflectionPad2d): Reflection padding layer.
     C1, C2 (float): Constants for stabilizing divisions.
     """
 
-    def __init__(self) -> None:
+    def __init__(self: SSIM) -> None:
         """Initializes the SSIM module."""
-        super(SSIM, self).__init__()
+        super().__init__()
         self.mu_x_pool = nn.AvgPool2d(3, 1)
         self.mu_y_pool = nn.AvgPool2d(3, 1)
         self.sig_x_pool = nn.AvgPool2d(3, 1)
@@ -400,7 +401,7 @@ class SSIM(nn.Module):
         self.C1 = 0.01**2
         self.C2 = 0.03**2
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def forward(self: SSIM, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """Forward pass of the SSIM.
 
         Args:
@@ -480,12 +481,13 @@ class DepthDecoder(nn.Module):
     """
 
     def __init__(
-        self,
+        self: DepthDecoder,
         num_ch_enc: list[int],
         scales: range = range(4),
         num_output_channels: int = 1,
+        *,
         use_skips: bool = True,
-    ):
+    ) -> None:
         """Initializes the DepthDecoder module.
 
         Args:
@@ -495,7 +497,7 @@ class DepthDecoder(nn.Module):
         num_output_channels (int, optional): Number of output channels for each scale. Defaults to 1.
         use_skips (bool, optional): Whether to use skip connections. Defaults to True.
         """
-        super(DepthDecoder, self).__init__()
+        super().__init__()
 
         self.num_output_channels = num_output_channels
         self.use_skips = use_skips
@@ -506,7 +508,8 @@ class DepthDecoder(nn.Module):
         self.num_ch_dec = np.array([16, 32, 64, 128, 256])
 
         # decoder
-        self.convs = OrderedDict()
+        self.convs: OrderedDict[tuple[str, int, int], nn.Module] = OrderedDict()
+
         for i in range(4, -1, -1):
             # upconv_0
             num_ch_in = self.num_ch_enc[-1] if i == 4 else self.num_ch_dec[i + 1]
@@ -521,12 +524,12 @@ class DepthDecoder(nn.Module):
             self.convs[("upconv", i, 1)] = ConvBlock(num_ch_in, num_ch_out)
 
         for s in self.scales:
-            self.convs[("dispconv", s)] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
+            self.convs[("dispconv", s, 0)] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
 
         self.decoder = nn.ModuleList(list(self.convs.values()))
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, input_features: list[torch.Tensor]) -> dict[str, torch.Tensor]:
+    def forward(self: DepthDecoder, input_features: list[torch.Tensor]) -> dict[str, torch.Tensor]:
         """Forward pass of the DepthDecoder.
 
         Args:
@@ -535,21 +538,22 @@ class DepthDecoder(nn.Module):
         Returns:
         Dict[str, torch.Tensor]: A dictionary containing the output depth maps at different scales.
         """
-        self.outputs = {}
+        outputs: dict[str, torch.Tensor] = {}
 
         # Decoder
         x = input_features[-1]
         for i in range(4, -1, -1):
             x = self.convs[("upconv", i, 0)](x)
-            x = [upsample(x)]
+            x = upsample(x)  # Removed the list enclosure
             if self.use_skips and i > 0:
-                x += [input_features[i - 1]]
-            x = torch.cat(x, 1)
-            x = self.convs[("upconv", i, 1)](x)
+                x = torch.cat([x, input_features[i - 1]], 1)  # Ensure x is a list of tensors
+            else:
+                x = self.convs[("upconv", i, 1)](x)
             if i in self.scales:
-                self.outputs[("disp", i)] = self.sigmoid(self.convs[("dispconv", i)](x))
+                # Modify the keys in outputs to be strings
+                outputs[f"disp_{i}"] = self.sigmoid(self.convs[("dispconv", i, 0)](x))
 
-        return self.outputs
+        return outputs
 
 
 class PoseCNN(nn.Module):
@@ -567,13 +571,13 @@ class PoseCNN(nn.Module):
     net (nn.ModuleList): List of convolutional layers as a module list.
     """
 
-    def __init__(self, num_input_frames: int):
+    def __init__(self: PoseCNN, num_input_frames: int) -> None:
         """Initializes the PoseCNN module.
 
         Args:
         num_input_frames (int): Number of frames to input into the network.
         """
-        super(PoseCNN, self).__init__()
+        super().__init__()
 
         self.num_input_frames = num_input_frames
 
@@ -590,11 +594,11 @@ class PoseCNN(nn.Module):
 
         self.num_convs = len(self.convs)
 
-        self.relu = nn.ReLU(True)
+        self.relu = nn.ReLU(inplace=True)
 
         self.net = nn.ModuleList(list(self.convs.values()))
 
-    def forward(self, out: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self: PoseCNN, out: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass of the PoseCNN.
 
         Args:
@@ -627,28 +631,30 @@ class PoseDecoder(nn.Module):
     Attributes:
     num_ch_enc (List[int]): Number of channels in each layer of the encoder.
     num_input_features (int): Number of input features.
-    num_frames_to_predict_for (Optional[int]): Number of frame pairs to predict pose for. Defaults to num_input_features - 1 if None.
+    num_frames_to_predict_for (Optional[int]): Number of frame pairs to predict pose for.
+                                               Defaults to num_input_features - 1 if None.
     convs (OrderedDict): Ordered dictionary of convolutional layers.
     relu (nn.ReLU): ReLU activation function.
     net (nn.ModuleList): List of layers as a module list.
     """
 
     def __init__(
-        self,
+        self: PoseDecoder,
         num_ch_enc: list[int],
         num_input_features: int,
         num_frames_to_predict_for: int | None = None,
         stride: int = 1,
-    ):
+    ) -> None:
         """Initializes the PoseDecoder module.
 
         Args:
         num_ch_enc (List[int]): Number of channels in each layer of the encoder.
         num_input_features (int): Number of input features.
-        num_frames_to_predict_for (Optional[int]): Number of frame pairs to predict pose for. Defaults to num_input_features - 1 if None.
+        num_frames_to_predict_for (Optional[int]): Number of frame pairs to predict pose for.
+                                                   Defaults to num_input_features - 1 if None.
         stride (int): Stride for convolutional layers.
         """
-        super(PoseDecoder, self).__init__()
+        super().__init__()
 
         self.num_ch_enc = num_ch_enc
         self.num_input_features = num_input_features
@@ -657,8 +663,9 @@ class PoseDecoder(nn.Module):
             num_frames_to_predict_for = num_input_features - 1
         self.num_frames_to_predict_for = num_frames_to_predict_for
 
-        self.convs = OrderedDict()
-        self.convs[("squeeze")] = nn.Conv2d(self.num_ch_enc[-1], 256, 1)
+        self.convs: OrderedDict[tuple[str, int], nn.Conv2d] = OrderedDict()
+
+        self.convs[("squeeze", 0)] = nn.Conv2d(self.num_ch_enc[-1], 256, 1)
         self.convs[("pose", 0)] = nn.Conv2d(num_input_features * 256, 256, 3, stride, 1)
         self.convs[("pose", 1)] = nn.Conv2d(256, 256, 3, stride, 1)
         self.convs[("pose", 2)] = nn.Conv2d(256, 6 * num_frames_to_predict_for, 1)
@@ -667,32 +674,35 @@ class PoseDecoder(nn.Module):
 
         self.net = nn.ModuleList(list(self.convs.values()))
 
-    def forward(self, input_features: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self: PoseDecoder, input_features: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward pass of the PoseDecoder.
 
         Args:
         input_features (List[torch.Tensor]): List of encoded feature tensors from the encoder.
 
         Returns:
-        Tuple[torch.Tensor, torch.Tensor]: Axisangle and translation components of the estimated pose for each frame pair.
+        Tuple[torch.Tensor, torch.Tensor]: Axisangle and translation components of the estimated pose
+                                           for each frame pair.
         """
         last_features = [f[-1] for f in input_features]
 
-        cat_features = [self.relu(self.convs["squeeze"](f)) for f in last_features]
-        cat_features = torch.cat(cat_features, 1)
+        # Create the concatenated tensor from the list of feature tensors
+        cat_tensor = torch.cat([self.relu(self.convs[("squeeze", 0)](f)) for f in last_features], 1)
 
-        out = cat_features
+        # Process the concatenated tensor through the pose layers
+        out = cat_tensor
         for i in range(3):
             out = self.convs[("pose", i)](out)
             if i != 2:
                 out = self.relu(out)
 
+        # Compute the mean and reshape the output
         out = out.mean(3).mean(2)
-
         out = 0.01 * out.view(-1, self.num_frames_to_predict_for, 1, 6)
 
-        axisangle = out[..., :3]
-        translation = out[..., 3:]
+        # Split the output into axisangle and translation components
+        axisangle = out[:, :, :3]
+        translation = out[:, :, 3:]
 
         return axisangle, translation
 
@@ -719,13 +729,30 @@ class ResNetMultiImageInput(models.ResNet):
     """
 
     def __init__(
-        self,
+        self: ResNetMultiImageInput,
         block: type[nn.Module],
         layers: list[int],
-        num_classes: int = 1000,
         num_input_images: int = 1,
-    ):
-        super(ResNetMultiImageInput, self).__init__(block, layers)
+    ) -> None:
+        """Initializes the ResNetMultiImageInput model.
+
+        This constructor extends the standard ResNet model to handle multiple input images by modifying
+        the first convolutional layer to accept a stack of images.
+
+        Args:
+            block (Type[nn.Module]): The block type to use within the ResNet model, typically either
+                BasicBlock or Bottleneck.
+            layers (List[int]): A list containing the number of layers to use in each of the 4 blocks
+                of the ResNet model.
+            num_input_images (int): The number of input images to be stacked before being fed into the
+                network. Defaults to 1. This parameter adjusts the in_channels of the first convolutional
+                layer to be `num_input_images * 3`, assuming 3 channels per image (RGB).
+
+        The rest of the network architecture, including batch normalization, ReLU activation, and max
+        pooling, follows the standard ResNet configuration. The network also initializes weights using
+        kaiming normalization for convolutional layers and constant values for batch normalization layers.
+        """
+        super().__init__()
         self.inplanes = 64
         self.conv1 = nn.Conv2d(num_input_images * 3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -746,8 +773,9 @@ class ResNetMultiImageInput(models.ResNet):
 
 def resnet_multiimage_input(
     num_layers: int,
-    pretrained: bool = False,
     num_input_images: int = 1,
+    *,
+    pretrained: bool = False,
 ) -> nn.Module:
     """Constructs a ResNet model with the option for multiple input images.
 
@@ -760,9 +788,12 @@ def resnet_multiimage_input(
         nn.Module: A ResNet model configured with the specified parameters.
 
     Raises:
-        AssertionError: If num_layers is not 18 or 50.
+        ValueError: If num_layers is not 18 or 50.
     """
-    assert num_layers in [18, 50], "Can only run with 18 or 50 layer resnet"
+    if num_layers not in [18, 50]:
+        message = "Invalid num_layers; must be 18 or 50"
+        raise ValueError(message)
+
     blocks = {18: [2, 2, 2, 2], 50: [3, 4, 6, 3]}[num_layers]
     block_type = {18: models.resnet.BasicBlock, 50: models.resnet.Bottleneck}[num_layers]
     model = ResNetMultiImageInput(block_type, blocks, num_input_images=num_input_images)
@@ -787,18 +818,25 @@ class ResnetEncoder(nn.Module):
         num_input_images (int): Number of input images. Default is 1.
     """
 
-    def __init__(self, num_layers: int, pretrained: bool, num_input_images: int = 1):
+    def __init__(
+        self: ResnetEncoder,
+        num_layers: int,
+        *,
+        pretrained: bool,
+        num_input_images: int = 1,
+    ) -> None:
         """Initializes the ResnetEncoder module.
 
         This constructor sets up the encoder based on the number of ResNet layers,
         whether to use a pretrained model, and the number of input images.
 
         Args:
-            num_layers (int): Number of layers in the ResNet model. Valid options include 18, 34, 50, 101, and 152.
+            num_layers (int): Number of layers in the ResNet model. Valid options include
+                              18, 34, 50, 101, and 152.
             pretrained (bool): If True, use a pre-trained model. Otherwise, initialize weights from scratch.
             num_input_images (int): The number of input images to the network. Defaults to 1.
         """
-        super(ResnetEncoder, self).__init__()
+        super().__init__()
 
         self.num_ch_enc = np.array([64, 64, 128, 256, 512])
 
@@ -811,17 +849,18 @@ class ResnetEncoder(nn.Module):
         }
 
         if num_layers not in resnets:
-            raise ValueError(f"{num_layers} is not a valid number of resnet layers")
+            message = f"{num_layers} is not a valid number of resnet layers"
+            raise ValueError(message)
 
         if num_input_images > 1:
-            self.encoder = resnet_multiimage_input(num_layers, pretrained, num_input_images)
+            self.encoder = resnet_multiimage_input(num_layers, num_input_images, pretrained=pretrained)
         else:
             self.encoder = resnets[num_layers](pretrained)
 
         if num_layers > 34:
             self.num_ch_enc[1:] *= 4
 
-    def forward(self, input_image: torch.Tensor) -> list[torch.Tensor]:
+    def forward(self: ResnetEncoder, input_image: torch.Tensor) -> list[torch.Tensor]:
         """Forward pass of the ResNet encoder.
 
         Args:
@@ -891,13 +930,13 @@ def download_model_if_doesnt_exist(model_name: str) -> None:
             "cdc5fc9b23513c07d5b19235d9ef08f7",
         ),
     }
+    models_dir = Path("models")
+    if not models_dir.exists():
+        models_dir.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists("models"):
-        os.makedirs("models")
+    model_path = models_dir / model_name
 
-    model_path = os.path.join("models", model_name)
-
-    def check_file_matches_md5(checksum: str, fpath: str) -> bool:
+    def check_file_matches_md5(checksum: str, fpath: Path) -> bool:
         """Checks if the file at the given path matches the provided MD5 checksum.
 
         This function reads the entire file into memory to compute its MD5 hash,
@@ -911,40 +950,48 @@ def download_model_if_doesnt_exist(model_name: str) -> None:
             bool: True if the file's MD5 checksum matches the provided checksum,
                 False if it doesn't match or the file doesn't exist.
         """
-        if not os.path.exists(fpath):
+        path = Path(fpath)
+        if not path.exists():
             return False
-        with open(fpath, "rb") as f:
-            current_md5checksum = hashlib.md5(f.read()).hexdigest()
-        return current_md5checksum == checksum
+        with path.open("rb") as f:
+            current_sha256checksum = hashlib.sha256(f.read()).hexdigest()
+        return current_sha256checksum == checksum
 
     # see if we have the model already downloaded...
-    if not os.path.exists(os.path.join(model_path, "encoder.pth")):
+    model_path = Path(model_path)
+    encoder_path = model_path / "encoder.pth"
+    zip_path = model_path.with_suffix(".zip")
+
+    if not encoder_path.exists():
         model_url, required_md5checksum = download_paths[model_name]
+        zip_path = model_path.with_suffix(".zip")
 
-        if not check_file_matches_md5(required_md5checksum, model_path + ".zip"):
-            print("-> Downloading pretrained model to {}".format(model_path + ".zip"))
-            urllib.request.urlretrieve(model_url, model_path + ".zip")
+        if not check_file_matches_md5(required_md5checksum, zip_path):
+            logger.info("-> Downloading pretrained model to %s", zip_path)
+            urllib.request.urlretrieve(model_url, zip_path)  # noqa: S310
 
-        if not check_file_matches_md5(required_md5checksum, model_path + ".zip"):
-            print("   Failed to download a file which matches the checksum - quitting")
-            quit()
+        if not check_file_matches_md5(required_md5checksum, zip_path):
+            logger.error("Failed to download a file that matches the checksum - quitting")
+            sys.exit(1)
 
-        print("   Unzipping model...")
-        with zipfile.ZipFile(model_path + ".zip", "r") as f:
-            f.extractall(model_path)
+        logger.info("   Unzipping model...")
+        with zipfile.ZipFile(str(zip_path), "r") as f:
+            f.extractall(str(model_path))
 
-        print(f"   Model unzipped to {model_path}")
+        logger.info("Model unzipped to %s", model_path)
 
 
 model_name = "mono_640x192"
+models_dir = Path("models")
+encoder_path = models_dir / model_name / "encoder.pth"
+depth_decoder_path = models_dir / model_name / "depth.pth"
+
 
 download_model_if_doesnt_exist(model_name)
-encoder_path = os.path.join("models", model_name, "encoder.pth")
-depth_decoder_path = os.path.join("models", model_name, "depth.pth")
 
 # LOADING PRETRAINED MODEL
-encoder = ResnetEncoder(18, False)
-depth_decoder = DepthDecoder(num_ch_enc=encoder.num_ch_enc, scales=range(4))
+encoder = ResnetEncoder(num_layers=18, pretrained=False)
+depth_decoder = DepthDecoder(num_ch_enc=encoder.num_ch_enc.tolist(), scales=range(4))
 
 loaded_dict_enc = torch.load(encoder_path, map_location="cpu")
 filtered_dict_enc = {k: v for k, v in loaded_dict_enc.items() if k in encoder.state_dict()}
@@ -956,14 +1003,14 @@ depth_decoder.load_state_dict(loaded_dict)
 encoder.eval()
 depth_decoder.eval()
 
-image_path = "../test-imgs/img-00004.jpeg"
+image_path = "/Users/maryam/projects/depth-aware-object-detection/test-imgs/img-00002.jpeg"
 
-input_image = pil.open(image_path).convert("RGB")
+input_image = Image.open(image_path).convert("RGB")
 original_width, original_height = input_image.size
 
 feed_height = loaded_dict_enc["height"]
 feed_width = loaded_dict_enc["width"]
-input_image_resized = input_image.resize((feed_width, feed_height), pil.LANCZOS)
+input_image_resized = input_image.resize((feed_width, feed_height), Image.LANCZOS)
 
 input_image_pytorch = transforms.ToTensor()(input_image_resized).unsqueeze(0)
 
