@@ -16,7 +16,9 @@ class MiDaSModel:
 
     This class encapsulates the functionality of the MiDaS model, allowing for easy
     loading and inference of depth maps from images. It supports different types of
-    MiDaS models and handles the necessary preprocessing and postprocessing steps.
+    MiDaS models: 'DPT_Large', 'DPT_Hybrid', and 'MiDaS_small'. 'DPT_Large' offers high accuracy,
+    'DPT_Hybrid' provides a balance between performance and resource utilization,
+    and 'MiDaS_small' is efficient for limited-resource environments.
 
     Attributes:
         device (torch.device): The device on which the model will run (CPU or CUDA).
@@ -64,7 +66,6 @@ image_dir = Path(test_img)
 
 fig, axes = plt.subplots(4, 5)
 axes = axes.ravel()
-
 
 for i, img_file in enumerate(os.listdir(image_dir)[:20]):
     img_path = image_dir / img_file
