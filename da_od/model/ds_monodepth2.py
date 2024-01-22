@@ -17,6 +17,8 @@ from torch import nn
 from torch.utils import model_zoo
 from torchvision import models, transforms
 
+from da_od.config import test_img
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
@@ -960,7 +962,7 @@ depth_decoder.load_state_dict(loaded_dict)
 encoder.eval()
 depth_decoder.eval()
 
-image_path = "/Users/maryam/projects/depth-aware-object-detection/test-imgs/img-00002.jpeg"
+image_path = test_img / "img-00002.jpeg"
 
 input_image = Image.open(image_path).convert("RGB")
 original_width, original_height = input_image.size
