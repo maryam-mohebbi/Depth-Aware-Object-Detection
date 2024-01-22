@@ -465,7 +465,34 @@ def compute_depth_errors(
 
 
 class DepthDecoder(nn.Module):
-    def __init__(self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
+    """A depth decoder module for neural networks that decodes encoded features into depth maps.
+
+    This module is designed for use in neural network architectures that require depth estimation,
+    such as in depth prediction or 3D reconstruction tasks. It takes the output of an encoder network,
+    typically a series of feature maps at different scales, and decodes them into depth maps. The
+    decoding process involves a series of up-convolutions and skip connections, optionally utilizing
+    features from earlier layers in the encoder for improved detail in the output. The depth maps are
+    produced at different scales depending on the specified range.
+    """
+
+    def __init__(
+        self,
+        num_ch_enc: list[int],
+        scales: range | int | None = None,
+        num_output_channels: int = 1,
+        use_skips: bool = True,
+    ) -> None:
+        """Initializes the DepthDecoder module.
+
+        Args:
+            num_ch_enc (List[int]): The number of channels in each layer of the encoder.
+            scales (Union[range, List[int]], optional): The scales at which to produce depth maps.
+                If not specified, defaults to range(4).
+            num_output_channels (int, optional): The number of output channels for the depth maps.
+                Defaults to 1.
+            use_skips (bool, optional): Whether to use skip connections from the encoder.
+                Defaults to True.
+        """
         super(DepthDecoder, self).__init__()
 
         self.num_output_channels = num_output_channels
@@ -497,7 +524,16 @@ class DepthDecoder(nn.Module):
         self.decoder = nn.ModuleList(list(self.convs.values()))
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, input_features):
+    def forward(self, input_features: list[torch.Tensor]) -> dict[str, torch.Tensor]:
+        """Forward pass of the DepthDecoder.
+
+        Args:
+            input_features (List[torch.Tensor]): A list of tensors representing encoded features from an encoder.
+
+        Returns:
+            Dict[str, torch.Tensor]: A dictionary where keys are layer names and values are tensors representing
+                                     depth maps at different scales.
+        """
         self.outputs = {}
 
         # decoder
@@ -990,7 +1026,6 @@ disp_resized = torch.nn.functional.interpolate(
 disp_resized_np = disp_resized.squeeze().cpu().numpy()
 vmax = np.percentile(disp_resized_np, 95)
 
-plt.figure(figsize=(10, 10))
 plt.subplot(211)
 plt.imshow(input_image)
 plt.title("Input", fontsize=22)
@@ -1000,3 +1035,4 @@ plt.subplot(212)
 plt.imshow(disp_resized_np, cmap="magma", vmax=vmax)
 plt.title("Disparity prediction", fontsize=22)
 plt.axis("off")
+plt.show()
