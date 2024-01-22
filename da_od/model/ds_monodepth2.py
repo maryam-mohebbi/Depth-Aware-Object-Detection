@@ -463,41 +463,8 @@ def compute_depth_errors(
 
 
 class DepthDecoder(nn.Module):
-    """A depth decoder module for depth estimation.
-
-    This module decodes features extracted by an encoder into depth maps. It uses skip connections
-    and upsampling to generate depth maps at multiple scales.
-
-    Attributes:
-    num_output_channels (int): Number of output channels in the depth maps.
-    use_skips (bool): Flag to use skip connections.
-    upsample_mode (str): Mode of upsampling.
-    scales (list): List of scales at which depth maps are generated.
-    num_ch_enc (list): Number of channels in the encoder's feature maps.
-    num_ch_dec (np.array): Number of channels in the decoder's layers.
-    convs (OrderedDict): Convolutional blocks in the decoder.
-    decoder (nn.ModuleList): List of decoder layers.
-    sigmoid (nn.Sigmoid): Sigmoid activation function.
-    """
-
-    def __init__(
-        self: DepthDecoder,
-        num_ch_enc: list[int],
-        scales: range = range(4),
-        num_output_channels: int = 1,
-        *,
-        use_skips: bool = True,
-    ) -> None:
-        """Initializes the DepthDecoder module.
-
-        Args:
-        num_ch_enc (List[int]): Number of channels in each layer of the encoder.
-        scales (range, optional): The scales at which to produce depth outputs.
-        Defaults to range(4).
-        num_output_channels (int, optional): Number of output channels for each scale. Defaults to 1.
-        use_skips (bool, optional): Whether to use skip connections. Defaults to True.
-        """
-        super().__init__()
+    def __init__(self, num_ch_enc, scales=range(4), num_output_channels=1, use_skips=True):
+        super(DepthDecoder, self).__init__()
 
         self.num_output_channels = num_output_channels
         self.use_skips = use_skips
@@ -508,8 +475,7 @@ class DepthDecoder(nn.Module):
         self.num_ch_dec = np.array([16, 32, 64, 128, 256])
 
         # decoder
-        self.convs: OrderedDict[tuple[str, int, int], nn.Module] = OrderedDict()
-
+        self.convs = OrderedDict()
         for i in range(4, -1, -1):
             # upconv_0
             num_ch_in = self.num_ch_enc[-1] if i == 4 else self.num_ch_dec[i + 1]
@@ -524,36 +490,27 @@ class DepthDecoder(nn.Module):
             self.convs[("upconv", i, 1)] = ConvBlock(num_ch_in, num_ch_out)
 
         for s in self.scales:
-            self.convs[("dispconv", s, 0)] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
+            self.convs[("dispconv", s)] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
 
         self.decoder = nn.ModuleList(list(self.convs.values()))
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self: DepthDecoder, input_features: list[torch.Tensor]) -> dict[str, torch.Tensor]:
-        """Forward pass of the DepthDecoder.
+    def forward(self, input_features):
+        self.outputs = {}
 
-        Args:
-        input_features (List[torch.Tensor]): The list of feature maps from the encoder.
-
-        Returns:
-        Dict[str, torch.Tensor]: A dictionary containing the output depth maps at different scales.
-        """
-        outputs: dict[str, torch.Tensor] = {}
-
-        # Decoder
+        # decoder
         x = input_features[-1]
         for i in range(4, -1, -1):
             x = self.convs[("upconv", i, 0)](x)
-            x = upsample(x)  # Removed the list enclosure
+            x = [upsample(x)]
             if self.use_skips and i > 0:
-                x = torch.cat([x, input_features[i - 1]], 1)  # Ensure x is a list of tensors
-            else:
-                x = self.convs[("upconv", i, 1)](x)
+                x += [input_features[i - 1]]
+            x = torch.cat(x, 1)
+            x = self.convs[("upconv", i, 1)](x)
             if i in self.scales:
-                # Modify the keys in outputs to be strings
-                outputs[f"disp_{i}"] = self.sigmoid(self.convs[("dispconv", i, 0)](x))
+                self.outputs[("disp", i)] = self.sigmoid(self.convs[("dispconv", i)](x))
 
-        return outputs
+        return self.outputs
 
 
 class PoseCNN(nn.Module):
