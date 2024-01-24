@@ -31,6 +31,10 @@ keras = ">=2.15.0,<2.16"
 opencv-python = "^4.8.1.78"
 torchvision = "^0.16.1"
 pillow = "^10.1.0"
+timm = "^0.9.12"
+stubs = "^1.0.0"
+types-six = "^1.16.21.20240106"
+six = "^1.16.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.0"
