@@ -17,7 +17,7 @@ from torch import nn
 from torch.utils import model_zoo
 from torchvision import models, transforms
 
-from da_od.config import test_img
+from da_od.config import model_output, test_img
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -925,7 +925,7 @@ def download_model_if_doesnt_exist(model_name: str) -> None:
             "cdc5fc9b23513c07d5b19235d9ef08f7",
         ),
     }
-    models_dir = Path("models")
+    models_dir = model_output
     if not models_dir.exists():
         models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -934,12 +934,9 @@ def download_model_if_doesnt_exist(model_name: str) -> None:
     def check_file_matches_md5(checksum: str, fpath: Path) -> bool:
         """Checks if the file at the given path matches the provided MD5 checksum.
 
-        This function reads the entire file into memory to compute its MD5 hash,
-        which might not be efficient for very large files.
-
         Args:
             checksum (str): The expected MD5 checksum.
-            fpath (str): The file path to check.
+            fpath (Path): The file path to check.
 
         Returns:
             bool: True if the file's MD5 checksum matches the provided checksum,
@@ -949,8 +946,8 @@ def download_model_if_doesnt_exist(model_name: str) -> None:
         if not path.exists():
             return False
         with path.open("rb") as f:
-            current_sha256checksum = hashlib.sha256(f.read()).hexdigest()
-        return current_sha256checksum == checksum
+            current_md5checksum = hashlib.md5(f.read()).hexdigest()
+        return current_md5checksum == checksum
 
     # see if we have the model already downloaded...
     model_path = Path(model_path)
@@ -977,7 +974,7 @@ def download_model_if_doesnt_exist(model_name: str) -> None:
 
 
 model_name = "mono_640x192"
-models_dir = Path("models")
+models_dir = model_output
 encoder_path = models_dir / model_name / "encoder.pth"
 depth_decoder_path = models_dir / model_name / "depth.pth"
 
