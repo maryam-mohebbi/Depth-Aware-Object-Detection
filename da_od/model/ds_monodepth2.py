@@ -476,10 +476,11 @@ class DepthDecoder(nn.Module):
     """
 
     def __init__(
-        self,
+        self: DepthDecoder,
         num_ch_enc: list[int],
-        scales: range | int | None = None,
+        scales: list[int] | None = None,
         num_output_channels: int = 1,
+        *,
         use_skips: bool = True,
     ) -> None:
         """Initializes the DepthDecoder module.
@@ -493,62 +494,59 @@ class DepthDecoder(nn.Module):
             use_skips (bool, optional): Whether to use skip connections from the encoder.
                 Defaults to True.
         """
-        super(DepthDecoder, self).__init__()
-
+        super().__init__()
         self.num_output_channels = num_output_channels
         self.use_skips = use_skips
         self.upsample_mode = "nearest"
-        self.scales = scales
+        self.scales = scales if scales is not None else list(range(4))
 
         self.num_ch_enc = num_ch_enc
         self.num_ch_dec = np.array([16, 32, 64, 128, 256])
 
-        # decoder
-        self.convs = OrderedDict()
+        self.convs = OrderedDict[str, (ConvBlock | Conv3x3)]()
+
         for i in range(4, -1, -1):
             # upconv_0
             num_ch_in = self.num_ch_enc[-1] if i == 4 else self.num_ch_dec[i + 1]
             num_ch_out = self.num_ch_dec[i]
-            self.convs[("upconv", i, 0)] = ConvBlock(num_ch_in, num_ch_out)
+            self.convs[f"upconv_{i}_0"] = ConvBlock(num_ch_in, num_ch_out)
 
             # upconv_1
             num_ch_in = self.num_ch_dec[i]
             if self.use_skips and i > 0:
                 num_ch_in += self.num_ch_enc[i - 1]
-            num_ch_out = self.num_ch_dec[i]
-            self.convs[("upconv", i, 1)] = ConvBlock(num_ch_in, num_ch_out)
+            self.convs[f"upconv_{i}_1"] = ConvBlock(num_ch_in, num_ch_out)
 
         for s in self.scales:
-            self.convs[("dispconv", s)] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
+            self.convs[f"dispconv_{s}"] = Conv3x3(self.num_ch_dec[s], self.num_output_channels)
 
-        self.decoder = nn.ModuleList(list(self.convs.values()))
+        self.decoder = nn.ModuleList(self.convs.values())
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, input_features: list[torch.Tensor]) -> dict[str, torch.Tensor]:
+    def forward(self: DepthDecoder, input_features: list[torch.Tensor]) -> dict[str, torch.Tensor]:
         """Forward pass of the DepthDecoder.
 
         Args:
-            input_features (List[torch.Tensor]): A list of tensors representing encoded features from an encoder.
+            input_features (List[torch.Tensor]): A list of tensors representing encoded features from
+                            an encoder.
 
         Returns:
-            Dict[str, torch.Tensor]: A dictionary where keys are layer names and values are tensors representing
-                                     depth maps at different scales.
+            Dict[str, torch.Tensor]: A dictionary where keys are layer names and values are tensors
+                                     representing depth maps at different scales.
         """
-        self.outputs = {}
+        outputs = {}
 
-        # decoder
         x = input_features[-1]
         for i in range(4, -1, -1):
-            x = self.convs[("upconv", i, 0)](x)
-            x = [upsample(x)]
+            x = self.convs[f"upconv_{i}_0"](x)
+            x = upsample(x)
             if self.use_skips and i > 0:
-                x += [input_features[i - 1]]
-            x = torch.cat(x, 1)
-            x = self.convs[("upconv", i, 1)](x)
+                x = torch.cat([x, input_features[i - 1]], 1)
+            x = self.convs[f"upconv_{i}_1"](x)
             if i in self.scales:
-                self.outputs[("disp", i)] = self.sigmoid(self.convs[("dispconv", i)](x))
+                outputs[f"disp_{i}"] = self.sigmoid(self.convs[f"dispconv_{i}"](x))
 
-        return self.outputs
+        return outputs
 
 
 class PoseCNN(nn.Module):
@@ -983,7 +981,7 @@ download_model_if_doesnt_exist(model_name)
 
 # LOADING PRETRAINED MODEL
 encoder = ResnetEncoder(num_layers=18, pretrained=False)
-depth_decoder = DepthDecoder(num_ch_enc=encoder.num_ch_enc.tolist(), scales=range(4))
+depth_decoder = DepthDecoder(num_ch_enc=encoder.num_ch_enc.tolist(), scales=list(range(4)))
 
 loaded_dict_enc = torch.load(encoder_path, map_location="cpu")
 filtered_dict_enc = {k: v for k, v in loaded_dict_enc.items() if k in encoder.state_dict()}
@@ -1010,7 +1008,8 @@ with torch.no_grad():
     features = encoder(input_image_pytorch)
     outputs = depth_decoder(features)
 
-disp = outputs[("disp", 0)]
+disp = outputs["disp_0"]
+
 
 disp_resized = torch.nn.functional.interpolate(
     disp,
