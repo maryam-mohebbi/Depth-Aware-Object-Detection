@@ -946,7 +946,7 @@ def download_model_if_doesnt_exist(model_name: str) -> None:
         if not path.exists():
             return False
         with path.open("rb") as f:
-            current_md5checksum = hashlib.md5(f.read()).hexdigest()
+            current_md5checksum = hashlib.md5(f.read()).hexdigest()  # noqa: S324
         return current_md5checksum == checksum
 
     # see if we have the model already downloaded...
