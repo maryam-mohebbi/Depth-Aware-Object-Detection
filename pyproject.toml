@@ -35,6 +35,9 @@ timm = "^0.9.12"
 stubs = "^1.0.0"
 types-six = "^1.16.21.20240106"
 six = "^1.16.0"
+gradio-imageslider = "^0.0.18"
+gradio = "4.14.0"
+huggingface-hub = "^0.20.3"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.0"
