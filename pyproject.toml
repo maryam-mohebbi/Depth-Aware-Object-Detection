@@ -38,6 +38,7 @@ six = "^1.16.0"
 gradio-imageslider = "^0.0.18"
 gradio = "4.14.0"
 huggingface-hub = "^0.20.3"
+transformers = "^4.37.2"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.7.0"
