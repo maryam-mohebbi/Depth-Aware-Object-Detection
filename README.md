@@ -22,9 +22,11 @@ Ruff
 ## project need to be in the `da_od` folder
 
 ## install ultralytics
-
-pip install ultralytics install super-gradients -q
+```
+install ultralytics install super-gradients -q
+```
 
 ## Install Segment Anything for image segmentation
-
-pip install git+https://github.com/facebookresearch/segment-anything.git
+```
+install git+https://github.com/facebookresearch/segment-anything.git
+```
