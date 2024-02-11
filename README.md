@@ -30,3 +30,8 @@ install ultralytics install super-gradients -q
 ```
 install git+https://github.com/facebookresearch/segment-anything.git
 ```
+
+### Download Pretrained Segment Anything Model and put in the SAM-Weights folder.
+```
+wget -c https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+```
