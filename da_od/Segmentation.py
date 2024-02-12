@@ -3,11 +3,13 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from segment_anything import SamPredictor, SamAutomaticMaskGenerator
+from da_od.config import test_img
 import SAM
 import YoloNas
 import utils
 
-image_path = 'data/img-00001.jpeg'
+image_path = test_img / "img-00001.jpeg"
+# image_path = 'data/img-00001.jpeg'
 class_names_file = "data/coco.names.txt"
 
 
