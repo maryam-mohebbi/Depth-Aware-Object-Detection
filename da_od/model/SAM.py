@@ -1,15 +1,19 @@
 import torch
-from segment_anything import sam_model_registry
 import numpy as np
 import matplotlib.pyplot as plt
-from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
+from segment_anything import sam_model_registry
 
-CHECKPOINT_PATH = 'SAM-Weights/sam_vit_h_4b8939.pth'
-DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-MODEL_TYPE = "vit_h"
 
-sam = sam_model_registry[MODEL_TYPE](checkpoint=CHECKPOINT_PATH)
-sam.to(device=DEVICE)
+def get_model(CHECKPOINT_PATH):
+    # CHECKPOINT_PATH = r'D:\COCO_YOLO_Detection\da_od\model\SAM-Weights\sam_vit_h_4b8939.pth'
+    # CHECKPOINT_PATH = 'SAM-Weights/sam_vit_h_4b8939.pth'
+    DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    MODEL_TYPE = "vit_h"
+
+    sam = sam_model_registry[MODEL_TYPE](checkpoint=CHECKPOINT_PATH)
+    sam.to(device=DEVICE)
+
+    return sam
 
 
 def show_mask(mask, ax, random_color=False):
@@ -51,6 +55,3 @@ def show_anns(anns):
         color_mask = np.concatenate([np.random.random(3), [0.35]])
         img[m] = color_mask
     # ax.imshow(img)
-
-
-

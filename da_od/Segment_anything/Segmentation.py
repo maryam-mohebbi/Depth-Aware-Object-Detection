@@ -3,14 +3,15 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from segment_anything import SamPredictor, SamAutomaticMaskGenerator
-from da_od.config import test_img
-import SAM
-import YoloNas
+from da_od.config import test_img, data_path, model_output, sam_weights
+from da_od.model import SAM
+from da_od.model import YoloNas
 import utils
 
 image_path = test_img / "img-00001.jpeg"
-# image_path = 'data/img-00001.jpeg'
-class_names_file = "data/coco.names.txt"
+class_names_file = data_path / "coco.names.txt"
+output_folder_path = model_output / "segmentation.jpg"
+Checkpoint_path = sam_weights / "SAM-Weights\sam_vit_h_4b8939.pth"
 
 
 def main():
@@ -19,13 +20,13 @@ def main():
     bboxes, confidence, labels, class_names, image = YoloNas.get_object_detection(image_path)
 
     # Instantiate mask generator
-    mask_generator = SamAutomaticMaskGenerator(SAM.sam)
+    mask_generator = SamAutomaticMaskGenerator(SAM.get_model(Checkpoint_path))
     mask = mask_generator.generate(image)
     SAM.show_anns(mask)
 
     # Create a predictor for SAM
-    image = cv2.imread(image_path)
-    predictor = SamPredictor(SAM.sam)
+    image = cv2.imread(str(image_path))
+    predictor = SamPredictor(SAM.get_model(Checkpoint_path))
     predictor.set_image(image)
 
     # Initialize a combined mask
@@ -68,7 +69,7 @@ def main():
     plt.figure(figsize=(18, 18))
     plt.imshow(final_image)
     plt.axis('off')
-    plt.savefig('output_folder/prediction.jpg')  # Save the combined output
+    plt.savefig(output_folder_path)  # Save the combined output
     plt.show()
 
 
