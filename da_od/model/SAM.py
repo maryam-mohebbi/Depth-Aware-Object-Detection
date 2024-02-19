@@ -5,8 +5,6 @@ from segment_anything import sam_model_registry
 
 
 def get_model(CHECKPOINT_PATH):
-    # CHECKPOINT_PATH = r'D:\COCO_YOLO_Detection\da_od\model\SAM-Weights\sam_vit_h_4b8939.pth'
-    # CHECKPOINT_PATH = 'SAM-Weights/sam_vit_h_4b8939.pth'
     DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     MODEL_TYPE = "vit_h"
 
