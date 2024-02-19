@@ -37,3 +37,4 @@ Thumbs.db
 # Other files and folders that should be ignored
 *.bak
 *.tmp
+/model_output
