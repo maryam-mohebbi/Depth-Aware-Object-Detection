@@ -46,7 +46,6 @@ if len(depth.shape) == 3:
 elif len(depth.shape) == 2:
     depth = depth.unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions if needed
 
-
 # Resizing to original image size
 depth = F.interpolate(depth, size=(h, w), mode="bilinear", align_corners=True)
 
@@ -54,14 +53,18 @@ depth = F.interpolate(depth, size=(h, w), mode="bilinear", align_corners=True)
 raw_depth = depth.cpu().numpy().squeeze()
 np.save(output_img / "raw_depth.npy", raw_depth)
 
-# Apply ReLU to ensure all values are non-negative (if necessary for your application)
+# Apply ReLU to ensure all values are non-negative
 depth = F.relu(depth)
 
-# Convert to 8-bit image and apply color map for visualization
+# Normalize to 0-255 for visualization
 depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
-depth = depth.cpu().numpy().astype(np.uint8)
-depth = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)
+depth = depth.cpu().numpy().astype(np.uint8).squeeze()
 
-cv2.imshow("", depth)
+# Apply color map for visualization
+depth_colormap = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)
 
+# Save or display the result
+cv2.imwrite(str(output_img / "depth_colormap.png"), depth_colormap)
+cv2.imshow("Depth Colormap", depth_colormap)
 cv2.waitKey(0)
+cv2.destroyAllWindows()
