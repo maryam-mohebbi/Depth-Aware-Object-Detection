@@ -29,7 +29,7 @@ transform = Compose(
     ],
 )
 
-image_path = test_img / "img-00001.jpeg"
+image_path = test_img / "img-00015.jpg"
 image = cv2.cvtColor(cv2.imread(str(image_path)), cv2.COLOR_BGR2RGB) / 255.0
 h, w = image.shape[:2]
 image = transform({"image": image})["image"]
