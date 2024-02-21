@@ -4,11 +4,11 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from da_od.config import class_names, output_img, sam_weights, test_img
+from da_od.config import class_names, output_img, sam_weights
 from da_od.model import seg_sam, yolo_nas
 from da_od.segment_anything import SamAutomaticMaskGenerator, SamPredictor
 
-image_path = test_img / "img-00002.jpeg"
+image_path = output_img / "depth_colormap.png"
 class_names_file = class_names / "coco.names.txt"
 output_folder_path = output_img / "segmentation.jpg"
 checkpoint_path = sam_weights / "sam_vit_h_4b8939.pth"
