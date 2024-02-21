@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F  # noqa: N812
 from torchvision.transforms import Compose
 
-from da_od.config import test_img
+from da_od.config import output_img, test_img
 from da_od.depth_anything.dpt import DepthAnything
 from da_od.depth_anything.util.transform import NormalizeImage, PrepareForNet, Resize
 
@@ -39,9 +39,26 @@ image = torch.from_numpy(image).unsqueeze(0)
 with torch.no_grad():
     depth = depth_anything(image)
 
-depth = F.interpolate(depth[None], (h, w), mode="bilinear", align_corners=False)[0, 0]
-depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
 
+# Ensure depth has the correct shape (N, C, H, W) before interpolation
+if len(depth.shape) == 3:
+    depth = depth.unsqueeze(0)  # Add a batch dimension if needed
+elif len(depth.shape) == 2:
+    depth = depth.unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions if needed
+
+
+# Resizing to original image size
+depth = F.interpolate(depth, size=(h, w), mode="bilinear", align_corners=True)
+
+# Saving the raw depth data
+raw_depth = depth.cpu().numpy().squeeze()
+np.save(output_img / "raw_depth.npy", raw_depth)
+
+# Apply ReLU to ensure all values are non-negative (if necessary for your application)
+depth = F.relu(depth)
+
+# Convert to 8-bit image and apply color map for visualization
+depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
 depth = depth.cpu().numpy().astype(np.uint8)
 depth = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)
 
