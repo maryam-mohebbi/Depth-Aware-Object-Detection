@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from huggingface_hub import PyTorchModelHubMixin
 from torch import nn
 
-from da_od.depth_anything.blocks import FeatureFusionBlock, _make_scratch
+from da_od.model.depth_anything.blocks import FeatureFusionBlock, _make_scratch
 
 
 def _make_fusion_block(features, use_bn, size=None):
