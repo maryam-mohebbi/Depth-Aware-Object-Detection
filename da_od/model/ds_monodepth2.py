@@ -17,7 +17,28 @@ from da_od.model import DepthDecoder, ResnetEncoder, download_model_if_doesnt_ex
 
 
 class MonocularDepthEstimator:
-    def __init__(self, image_path: Path, model_name: str = "mono_640x192") -> None:
+    """MonocularDepthEstimator uses a pre-trained model for monocular depth estimation.
+
+    This class is designed to load a specific monocular depth estimation model and use it to estimate
+    the depth of an input image. It provides functionalities to process the image, perform depth estimation,
+    and return both raw and color-mapped depth images as numpy arrays.
+
+    Attributes:
+        image_path (Path): Path to the input image for depth estimation.
+        model_name (str): Name of the model to use for depth estimation. Defaults to "mono_640x192".
+
+    Methods:
+        load_model(): Loads the encoder and depth decoder models.
+        process_image(): Processes the input image, performs depth estimation, and returns the depth images.
+    """
+
+    def __init__(self: MonocularDepthEstimator, image_path: Path, model_name: str = "mono_640x192") -> None:
+        """Initializes the MonocularDepthEstimator with the path to an input image and the model name.
+
+        Parameters:
+            image_path (Path): Path to the input image.
+            model_name (str): The model name for depth estimation. Defaults to "mono_640x192".
+        """
         self.image_path = image_path
         self.model_name = model_name
 
@@ -28,7 +49,13 @@ class MonocularDepthEstimator:
         download_model_if_doesnt_exist(model_name)
         self.load_model()
 
-    def load_model(self):
+    def load_model(self: MonocularDepthEstimator) -> None:
+        """Loads the encoder and depth decoder models from specified paths.
+
+        This method is responsible for loading the ResnetEncoder and DepthDecoder models
+        using the model paths defined during initialization. It updates the class attributes
+        with the loaded models and their configuration.
+        """
         encoder = ResnetEncoder(num_layers=18, pretrained=False)
         depth_decoder = DepthDecoder(num_ch_enc=encoder.num_ch_enc.tolist(), scales=list(range(4)))
 
@@ -47,7 +74,17 @@ class MonocularDepthEstimator:
         self.feed_height = loaded_dict_enc["height"]
         self.feed_width = loaded_dict_enc["width"]
 
-    def process_image(self) -> tuple[np.ndarray, np.ndarray]:
+    def process_image(self: MonocularDepthEstimator) -> tuple[np.ndarray, np.ndarray]:
+        """Processes the input image, performs depth estimation, and returns the depth images.
+
+        This method reads the input image, resizes it for the model, performs depth estimation,
+        and processes the output to generate both a raw and a color-mapped depth image. It saves
+        these images to disk and returns their numpy array representations.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: A tuple containing the color-mapped depth image and
+                                           the normalized raw depth image as numpy arrays.
+        """
         input_image = Image.open(self.image_path).convert("RGB")
         original_width, original_height = input_image.size
 
@@ -66,23 +103,19 @@ class MonocularDepthEstimator:
             align_corners=False,
         )
 
-        # Process and save depth images
         disp_resized_np = disp_resized.squeeze().cpu().numpy()
         vmax = np.percentile(disp_resized_np, 95)
         depth_colormap = plt.get_cmap("magma")(disp_resized_np / vmax)[:, :, :3]
         depth_colormap = (depth_colormap * 255).astype(np.uint8)
         image_filename = self.image_path.stem
 
-        # Saving raw depth as npy
         np.save(output_img / f"{image_filename}_raw_depth.npy", disp_resized_np)
 
-        # Saving raw depth as jpg
         depth_raw_normalized = np.interp(disp_resized_np, (disp_resized_np.min(), vmax), (0, 255)).astype(
             np.uint8,
         )
         cv2.imwrite(str(output_img / f"{image_filename}_depth_raw.jpg"), depth_raw_normalized)
 
-        # Saving color-mapped depth image
         plt.imsave(str(output_img / f"{image_filename}_depth_colormap.jpg"), depth_colormap)
 
         return depth_colormap, depth_raw_normalized
