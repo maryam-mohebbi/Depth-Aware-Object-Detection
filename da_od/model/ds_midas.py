@@ -72,3 +72,4 @@ for i, img_file in enumerate(os.listdir(image_dir)[:20]):
     depth_map = midas.predict_depth(img_path)
     axes[i].imshow(depth_map)
     axes[i].axis("off")
+plt.show()

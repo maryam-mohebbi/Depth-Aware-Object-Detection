@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F  # noqa: N812
 from torchvision.transforms import Compose
 
-from da_od.config import test_img
+from da_od.config import output_img, test_img
 from da_od.depth_anything.dpt import DepthAnything
 from da_od.depth_anything.util.transform import NormalizeImage, PrepareForNet, Resize
 
@@ -29,7 +29,7 @@ transform = Compose(
     ],
 )
 
-image_path = test_img / "img-00001.jpeg"
+image_path = test_img / "img-00015.jpg"
 image = cv2.cvtColor(cv2.imread(str(image_path)), cv2.COLOR_BGR2RGB) / 255.0
 h, w = image.shape[:2]
 image = transform({"image": image})["image"]
@@ -39,12 +39,32 @@ image = torch.from_numpy(image).unsqueeze(0)
 with torch.no_grad():
     depth = depth_anything(image)
 
-depth = F.interpolate(depth[None], (h, w), mode="bilinear", align_corners=False)[0, 0]
+
+# Ensure depth has the correct shape (N, C, H, W) before interpolation
+if len(depth.shape) == 3:
+    depth = depth.unsqueeze(0)  # Add a batch dimension if needed
+elif len(depth.shape) == 2:
+    depth = depth.unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions if needed
+
+# Resizing to original image size
+depth = F.interpolate(depth, size=(h, w), mode="bilinear", align_corners=True)
+
+# Saving the raw depth data
+raw_depth = depth.cpu().numpy().squeeze()
+np.save(output_img / "raw_depth.npy", raw_depth)
+
+# Apply ReLU to ensure all values are non-negative
+depth = F.relu(depth)
+
+# Normalize to 0-255 for visualization
 depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+depth = depth.cpu().numpy().astype(np.uint8).squeeze()
 
-depth = depth.cpu().numpy().astype(np.uint8)
-depth = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)
+# Apply color map for visualization
+depth_colormap = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)
 
-cv2.imshow("", depth)
-
+# Save or display the result
+cv2.imwrite(str(output_img / "depth_colormap.png"), depth_colormap)
+cv2.imshow("Depth Colormap", depth_colormap)
 cv2.waitKey(0)
+cv2.destroyAllWindows()
