@@ -92,16 +92,16 @@ class DepthAnythingEstimator:
         depth = F.interpolate(depth, size=(h, w), mode="bilinear", align_corners=True)
 
         raw_depth = depth.cpu().numpy().squeeze()
-        np.save(output_img / f"{image_filename}_raw_depth.npy", raw_depth)
+        np.save(output_img / f"DA_{image_filename}_raw_depth.npy", raw_depth)
 
         depth = F.relu(depth)
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
         depth_uint8 = depth.cpu().numpy().astype(np.uint8).squeeze()
 
-        cv2.imwrite(str(output_img / f"{image_filename}_depth_raw.jpg"), depth_uint8)
+        cv2.imwrite(str(output_img / f"DA_{image_filename}_depth_raw.jpg"), depth_uint8)
 
         depth_colormap = cv2.applyColorMap(depth_uint8, cv2.COLORMAP_INFERNO)
-        cv2.imwrite(str(output_img / f"{image_filename}_depth_colormap.jpg"), depth_colormap)
+        cv2.imwrite(str(output_img / f"DA_{image_filename}_depth_colormap.jpg"), depth_colormap)
 
         return depth_colormap, depth_uint8
 
@@ -165,14 +165,14 @@ class MiDaSEstimator:
         depth_normalized = (depth_numpy - depth_min) / (depth_max - depth_min) * 255.0
         depth_uint8 = depth_normalized.astype(np.uint8)
 
-        raw_depth_image_path = output_img / f"{self.image_path.stem}_depth_raw.jpg"
+        raw_depth_image_path = output_img / f"Mi_{self.image_path.stem}_depth_raw.jpg"
         cv2.imwrite(str(raw_depth_image_path), depth_uint8)
 
-        raw_depth_data_path = output_img / f"{self.image_path.stem}_raw_depth.npy"
+        raw_depth_data_path = output_img / f"Mi_{self.image_path.stem}_raw_depth.npy"
         np.save(raw_depth_data_path, depth_numpy)
 
         depth_colored = cv2.applyColorMap(depth_uint8, cv2.COLORMAP_MAGMA)
-        colored_depth_image_path = output_img / f"{self.image_path.stem}_depth_colormap.jpg"
+        colored_depth_image_path = output_img / f"Mi_{self.image_path.stem}_depth_colormap.jpg"
         cv2.imwrite(str(colored_depth_image_path), depth_colored)
 
         return depth_colored, depth_numpy
