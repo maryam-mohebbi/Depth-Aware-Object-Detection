@@ -16,9 +16,9 @@ from torchvision import transforms
 from torchvision.transforms import Compose, Resize, ToTensor
 
 from da_od.config import model_output, output_img
-from da_od.depth_anything.dpt import DepthAnything
-from da_od.depth_anything.util.transform import NormalizeImage, PrepareForNet
-from da_od.depth_anything.util.transform import Resize as DA_Resize
+from da_od.model.depth_anything.dpt import DepthAnything
+from da_od.model.depth_anything.util.transform import NormalizeImage, PrepareForNet
+from da_od.model.depth_anything.util.transform import Resize as DA_Resize
 from da_od.model.monodepth import DepthDecoder, ResnetEncoder, download_model_if_doesnt_exist
 
 
