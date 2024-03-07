@@ -49,8 +49,27 @@ class SamModelManager:
 
 
 class SAMVisualizationTools:
+    """Provides static methods for visualizing different aspects of segmentation and models' outputs.
+
+    This utility class contains methods to display masks, points, bounding boxes, and annotations directly
+    on matplotlib Axes objects. It is designed to assist in the visualization of outputs from segmentation
+    models, particularly in the context of object detection and segmentation tasks. The visualization tools
+    support a variety of visual elements including masks with optional random colors, points with labels,
+    bounding boxes, and layered annotations with sorted areas.
+
+    The methods are static, allowing them to be called without the need for instantiating the
+    SAMVisualizationTools class. This design choice simplifies quick and on-the-fly visualizations
+    during model development and evaluation.
+
+    Methods:
+    - show_mask: Plots a segmentation mask on a given Axes object.
+    - show_points: Displays positive and negative points with different colors on a given Axes object.
+    - show_box: Draws a single bounding box on a given Axes object.
+    - show_anns: Overlays multiple segmentation annotations on the current matplotlib figure.
+    """
+
     @staticmethod
-    def show_mask(mask: np.ndarray, ax: plt.Axes, random_color: bool = False) -> None:
+    def show_mask(mask: np.ndarray, ax: plt.Axes, *, random_color: bool = False) -> None:
         """Displays a mask overlay on the given Axes object with an optional random color.
 
         Parameters:
@@ -113,10 +132,12 @@ class SAMVisualizationTools:
     def show_anns(anns: list[dict]) -> None:
         """Displays annotations on the current matplotlib figure.
 
-        If there are no annotations, the function returns immediately. Otherwise, it sorts the annotations by area in descending order and overlays them on the current Axes object.
+        If there are no annotations, the function returns immediately. Otherwise, it sorts the annotations by
+        area in descending order and overlays them on the current Axes object.
 
         Parameters:
-        - anns (list[dict]): A list of annotation dictionaries. Each dictionary should have a "segmentation" key with the mask and an "area" key.
+        - anns (list[dict]): A list of annotation dictionaries. Each dictionary should have a "segmentation"
+                             key with the mask and an "area" key.
         """
         if len(anns) == 0:
             return
