@@ -178,7 +178,7 @@ class MiDaSEstimator:
         colored_depth_image_path = output_img / f"Mi_{self.image_path.stem}_depth_colormap.jpg"
         cv2.imwrite(str(colored_depth_image_path), depth_colored)
 
-        return depth_colored, depth_numpy
+        return depth_colored, depth_uint8
 
 
 class MonocularDepthEstimator:
