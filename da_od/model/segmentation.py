@@ -12,10 +12,10 @@ import torch
 from super_gradients.training import models
 
 from da_od.config import output_img
-from da_od.segment_anything import SamPredictor, sam_model_registry
+from da_od.model.segment_anything import SamPredictor, sam_model_registry
 
 if TYPE_CHECKING:
-    from da_od.segment_anything.modeling import Sam
+    from da_od.model.segment_anything.modeling import Sam
 
 
 class PredictionDetail(Protocol):

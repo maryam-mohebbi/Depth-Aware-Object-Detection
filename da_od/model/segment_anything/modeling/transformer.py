@@ -9,7 +9,7 @@ import math
 import torch
 from torch import Tensor, nn
 
-from da_od.segment_anything.modeling.common import MLPBlock
+from da_od.model.segment_anything.modeling.common import MLPBlock
 
 
 class TwoWayTransformer(nn.Module):

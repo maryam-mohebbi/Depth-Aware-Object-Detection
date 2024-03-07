@@ -10,9 +10,9 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from da_od.segment_anything.modeling.image_encoder import ImageEncoderViT
-from da_od.segment_anything.modeling.mask_decoder import MaskDecoder
-from da_od.segment_anything.modeling.prompt_encoder import PromptEncoder
+from da_od.model.segment_anything.modeling.image_encoder import ImageEncoderViT
+from da_od.model.segment_anything.modeling.mask_decoder import MaskDecoder
+from da_od.model.segment_anything.modeling.prompt_encoder import PromptEncoder
 
 
 class Sam(nn.Module):

@@ -9,8 +9,8 @@ from typing import Optional
 import numpy as np
 import torch
 
-from da_od.segment_anything.modeling import Sam
-from da_od.segment_anything.utils.transforms import ResizeLongestSide
+from da_od.model.segment_anything.modeling import Sam
+from da_od.model.segment_anything.utils.transforms import ResizeLongestSide
 
 
 class SamPredictor:

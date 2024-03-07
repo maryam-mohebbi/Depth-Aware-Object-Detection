@@ -8,7 +8,7 @@ from functools import partial
 
 import torch
 
-from da_od.segment_anything.modeling import (
+from da_od.model.segment_anything.modeling import (
     ImageEncoderViT,
     MaskDecoder,
     PromptEncoder,
