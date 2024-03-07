@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import cv2
 import matplotlib.pyplot as plt
@@ -10,7 +10,11 @@ import numpy as np
 import torch
 from super_gradients.training import models
 
+from da_od.config import output_img
 from da_od.segment_anything import SamPredictor, sam_model_registry
+
+if TYPE_CHECKING:
+    from da_od.segment_anything.modeling import Sam
 
 
 class PredictionDetail(Protocol):
@@ -152,11 +156,11 @@ class SamModelManager:
     defined in the `sam_model_registry`.
     """
 
-    def __init__(self: SamModelManager, checkpoint_path: str, model_type: str = "vit_h") -> None:
+    def __init__(self: SamModelManager, checkpoint_path: Path, model_type: str = "vit_h") -> None:
         """Initializes the SamModelManager with a given checkpoint path and model type.
 
         Parameters:
-        - checkpoint_path (str): The file path to the model checkpoint.
+        - checkpoint_path (Path): The file path to the model checkpoint.
         - model_type (str, optional): The type of model to load. Defaults to "vit_h".
 
         Attributes:
@@ -170,14 +174,14 @@ class SamModelManager:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = self.load_model()
 
-    def load_model(self: SamModelManager) -> torch.nn.Module:
+    def load_model(self: SamModelManager) -> Sam:
         """Loads a SAM model from the specified checkpoint into the designated device.
 
         The model type is selected based on the `model_type` attribute, and the actual model
         instance is retrieved from the `sam_model_registry`.
 
         Returns:
-        - The loaded SAM model as an instance of `torch.nn.Module`.
+        - The loaded SAM model.
         """
         sam = sam_model_registry[self.model_type](checkpoint=self.checkpoint_path)
         sam.to(device=self.device)
@@ -290,31 +294,42 @@ class SAMVisualizationTools:
 
 
 class SegmentDetection:
-    def __init__(self, class_names_file, output_folder_path, checkpoint_path):
-        self.class_names_file = class_names_file
-        self.output_folder_path = output_folder_path
+    def __init__(self: SegmentDetection, class_names_path: Path, checkpoint_path: Path):
+        self.class_names_path = class_names_path
+        self.output_path = output_img
         self.checkpoint_path = checkpoint_path
-        self.class_names = self.read_class_names(self.class_names_file)
-        self.model = self.load_model(self.checkpoint_path)
-        self.object_detector = ObjectDetector(
-            model_name="yolo_nas_l",
-            pretrained_weights="coco",
-            conf_threshold=0.25,
-        )
+        self.class_names = self.read_class_names(self.class_names_path)
+        self.model = self.model_loading(self.checkpoint_path)
+        self.object_detector: ObjectDetector | None = None
         self.display_utils = SAMVisualizationTools()
 
-    def read_class_names(self, file_path):
-        with open(file_path) as file:
+    def configure_object_detector(
+        self: SegmentDetection,
+        model_name: str = "yolo_nas_l",
+        pretrained_weights: str = "coco",
+        conf_threshold: float = 0.25,
+    ) -> None:
+        self.object_detector = ObjectDetector(
+            model_name=model_name,
+            pretrained_weights=pretrained_weights,
+            conf_threshold=conf_threshold,
+        )
+
+    def read_class_names(self: SegmentDetection, file_path: Path) -> list[str]:
+        with file_path.open() as file:
             class_names = [line.strip() for line in file.readlines()]
         return class_names
 
-    def load_model(self, checkpoint_path):
+    def model_loading(self: SegmentDetection, checkpoint_path: Path) -> Sam:
         sam_model_manager = SamModelManager(checkpoint_path)
-        model = sam_model_manager.load_model()
-        return model
+        return sam_model_manager.load_model()
 
-    def detect_and_segment(self, input_data):
+    def detect_and_segment(self: SegmentDetection, input_data: Path | np.ndarray) -> None:
+        if self.object_detector is None:
+            message = "Object detector has not been configured."
+            raise ValueError(message)
         bboxes, _, labels, _, image = self.object_detector.detect_objects(input_data)
+
         predictor = SamPredictor(self.model)
         predictor.set_image(image)
 
@@ -324,7 +339,14 @@ class SegmentDetection:
 
         self.display_results(image, combined_mask)
 
-    def process_label(self, input_box, label, combined_mask, image, predictor):
+    def process_label(
+        self: SegmentDetection,
+        input_box: tuple[float, float, float, float],
+        label: str,
+        combined_mask: np.ndarray,
+        image: np.ndarray,
+        predictor: SamPredictor,
+    ) -> None:
         mask, _, _ = predictor.predict(
             point_coords=None,
             point_labels=None,
@@ -347,15 +369,16 @@ class SegmentDetection:
             2,
         )
 
-        random_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        random_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))  # noqa: S311
+
         mask_color = np.array(random_color)
         combined_mask += mask[0][..., None] * mask_color
 
-    def display_results(self, image, combined_mask):
+    def display_results(self: SegmentDetection, image: np.ndarray, combined_mask: np.ndarray) -> None:
         final_image = cv2.addWeighted(image, 0.7, combined_mask.astype(np.uint8), 0.3, 0)
         plt.close("all")
         plt.figure(figsize=(10, 10))
         plt.imshow(final_image)
         plt.axis("off")
-        plt.savefig(self.output_folder_path)
+        plt.savefig(self.output_path)
         plt.show()
