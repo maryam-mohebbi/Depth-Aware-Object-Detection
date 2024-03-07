@@ -453,9 +453,10 @@ class SegmentDetection:
             image_filename (str): The base filename for saving the output image.
         """
         final_image = cv2.addWeighted(image, 0.7, combined_mask.astype(np.uint8), 0.3, 0)
+        plt.imsave(str(self.output_path / f"Seg_{image_filename}.jpg"), final_image)
+
         plt.close("all")
         plt.figure(figsize=(10, 10))
         plt.imshow(final_image)
         plt.axis("off")
-        plt.savefig(self.output_path / f"Seg_{image_filename}.jpg")
         plt.show()
