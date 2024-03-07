@@ -27,8 +27,6 @@ def get_object_detection(image_input: Union[str, np.ndarray]):
 
     conf_threshold = 0.25
 
-    # If you have the image as a NumPy array, adjust the predict method to handle it directly
-    # This assumes model.predict can work with NumPy arrays; if not, the model or predict method needs to be adapted
     if isinstance(image_input, np.ndarray):
         detection_pred = model.predict(image, conf=conf_threshold)  # Adjusted to use the image array
     else:
