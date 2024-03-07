@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
@@ -328,6 +329,9 @@ class SegmentDetection:
         if self.object_detector is None:
             message = "Object detector has not been configured."
             raise ValueError(message)
+
+        image_filename = input_data.stem if isinstance(input_data, Path) else f"{int(time.time())}"
+
         bboxes, _, labels, _, image = self.object_detector.detect_objects(input_data)
 
         predictor = SamPredictor(self.model)
@@ -337,7 +341,7 @@ class SegmentDetection:
         for i, label in enumerate(labels):
             self.process_label(bboxes[i], label, combined_mask, image, predictor)
 
-        self.display_results(image, combined_mask)
+        self.display_results(image, combined_mask, image_filename)
 
     def process_label(
         self: SegmentDetection,
@@ -374,11 +378,16 @@ class SegmentDetection:
         mask_color = np.array(random_color)
         combined_mask += mask[0][..., None] * mask_color
 
-    def display_results(self: SegmentDetection, image: np.ndarray, combined_mask: np.ndarray) -> None:
+    def display_results(
+        self: SegmentDetection,
+        image: np.ndarray,
+        combined_mask: np.ndarray,
+        image_filename: str,
+    ) -> None:
         final_image = cv2.addWeighted(image, 0.7, combined_mask.astype(np.uint8), 0.3, 0)
         plt.close("all")
         plt.figure(figsize=(10, 10))
         plt.imshow(final_image)
         plt.axis("off")
-        plt.savefig(self.output_path)
+        plt.savefig(self.output_path / f"Seg_{image_filename}.jpg")
         plt.show()
