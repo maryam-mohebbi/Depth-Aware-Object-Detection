@@ -295,7 +295,29 @@ class SAMVisualizationTools:
 
 
 class SegmentDetection:
-    def __init__(self: SegmentDetection, class_names_path: Path, checkpoint_path: Path):
+    """A class for segmenting objects in images using a model for detection and SAM for segmentation.
+
+    Attributes:
+        class_names_path (Path): The path to the file containing class names.
+        output_path (Path): The directory path where output images will be saved.
+        checkpoint_path (Path): The path to the model checkpoint for loading the segmentation model.
+        class_names (list[str]): A list of class names read from the class_names_path.
+        model (Sam): The loaded SAM model for image segmentation.
+        object_detector (ObjectDetector | None): An instance of an object detector, initially
+                                                 None until configured.
+        display_utils (SAMVisualizationTools): An instance of a utility class for displaying images.
+
+    """
+
+    def __init__(self: SegmentDetection, class_names_path: Path, checkpoint_path: Path) -> None:
+        """Initializes the SegmentDetection instance.
+
+        Setting up paths, reading class names, loading the model, and initializing visualization tools.
+
+        Parameters:
+            class_names_path (Path): The path to the file containing the class names.
+            checkpoint_path (Path): The path to the model checkpoint for loading the segmentation model.
+        """
         self.class_names_path = class_names_path
         self.output_path = output_img
         self.checkpoint_path = checkpoint_path
@@ -310,6 +332,13 @@ class SegmentDetection:
         pretrained_weights: str = "coco",
         conf_threshold: float = 0.25,
     ) -> None:
+        """Configures the object detector with a specific model, pretrained weights, and confidence threshold.
+
+        Parameters:
+            model_name (str): The name of the detection model to use.
+            pretrained_weights (str): The dataset on which the model was pretrained (e.g., "coco").
+            conf_threshold (float): The confidence threshold for detecting objects.
+        """
         self.object_detector = ObjectDetector(
             model_name=model_name,
             pretrained_weights=pretrained_weights,
@@ -317,15 +346,38 @@ class SegmentDetection:
         )
 
     def read_class_names(self: SegmentDetection, file_path: Path) -> list[str]:
+        """Reads the class names from a file and returns them as a list.
+
+        Parameters:
+            file_path (Path): The path to the file containing class names.
+
+        Returns:
+            list[str]: A list of class names.
+        """
         with file_path.open() as file:
-            class_names = [line.strip() for line in file.readlines()]
-        return class_names
+            return [line.strip() for line in file.readlines()]
 
     def model_loading(self: SegmentDetection, checkpoint_path: Path) -> Sam:
+        """Loads the segmentation model from the specified checkpoint path.
+
+        Parameters:
+            checkpoint_path (Path): The path to the checkpoint file.
+
+        Returns:
+            Sam: The loaded SAM model.
+        """
         sam_model_manager = SamModelManager(checkpoint_path)
         return sam_model_manager.load_model()
 
     def detect_and_segment(self: SegmentDetection, input_data: Path | np.ndarray) -> None:
+        """Performs object detection and segmentation on the input data and displays the results.
+
+        Parameters:
+            input_data (Path | np.ndarray): The input image or path to the image to process.
+
+        Raises:
+            ValueError: If the object detector has not been configured prior to this method call.
+        """
         if self.object_detector is None:
             message = "Object detector has not been configured."
             raise ValueError(message)
@@ -351,6 +403,15 @@ class SegmentDetection:
         image: np.ndarray,
         predictor: SamPredictor,
     ) -> None:
+        """Processes a detected object, performs segmentation, and updates the image and mask accordingly.
+
+        Parameters:
+            input_box (tuple[float, float, float, float]): The bounding box of the detected object.
+            label (str): The label of the detected object.
+            combined_mask (np.ndarray): The combined mask for all objects, updated in-place.
+            image (np.ndarray): The original image, updated in-place with detection and segmentation visuals.
+            predictor (SamPredictor): The SAM predictor instance for segmentation.
+        """
         mask, _, _ = predictor.predict(
             point_coords=None,
             point_labels=None,
@@ -384,6 +445,13 @@ class SegmentDetection:
         combined_mask: np.ndarray,
         image_filename: str,
     ) -> None:
+        """Displays and saves the final image with segmented objects.
+
+        Parameters:
+            image (np.ndarray): The original image with overlayed segmentation masks.
+            combined_mask (np.ndarray): The combined segmentation mask for all detected objects.
+            image_filename (str): The base filename for saving the output image.
+        """
         final_image = cv2.addWeighted(image, 0.7, combined_mask.astype(np.uint8), 0.3, 0)
         plt.close("all")
         plt.figure(figsize=(10, 10))
