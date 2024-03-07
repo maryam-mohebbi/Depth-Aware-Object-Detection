@@ -245,7 +245,7 @@ class SAMVisualizationTools:
             marker="*",
             s=marker_size,
             edgecolor="white",
-            linewidth=1.25,
+            linewidth=1,
         )
         ax.scatter(
             neg_points[:, 0],
@@ -254,7 +254,7 @@ class SAMVisualizationTools:
             marker="*",
             s=marker_size,
             edgecolor="white",
-            linewidth=1.25,
+            linewidth=1,
         )
 
     @staticmethod
@@ -423,15 +423,31 @@ class SegmentDetection:
         class_name = self.class_names[cls]
 
         x_min, y_min, x_max, y_max = input_box
-        cv2.rectangle(image, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (0, 255, 0), 2)
+        cv2.rectangle(image, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (0, 255, 0), 1)
+
+        text_scale = 0.3
+        text_thickness = 1
+        text_size = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, text_scale, text_thickness)[0]
+        text_x, text_y = int(x_min), int(y_min) - 10
+
+        highlight_color = (255, 255, 0)
+
+        cv2.rectangle(
+            image,
+            (text_x, text_y - text_size[1] - 3),
+            (text_x + text_size[0], text_y + 3),
+            highlight_color,
+            -1,  # Negative thickness makes the rectangle filled
+        )
+
         cv2.putText(
             image,
             class_name,
-            (int(x_min), int(y_min) - 10),
+            (text_x, text_y),
             cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (0, 255, 0),
-            2,
+            text_scale,
+            (0, 0, 0),  # Black color
+            text_thickness,
         )
 
         random_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))  # noqa: S311
