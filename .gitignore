@@ -35,5 +35,3 @@ Thumbs.db
 *.bak
 *.tmp
 /model_output
-*.pt
-*.pth
