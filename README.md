@@ -113,6 +113,7 @@ The integration process involves merging the outputs of the object detection and
   <img src="output-imgs/Seg_1711544891.jpg"style="width: 50%;"/><img src="output-imgs/Seg_1711544948.jpg"style="width: 50%;"/> 
 </p>
 
+**If you are interested, more sample visualized [here](output-imgs/sample_result/sample.md)**
 
 ## Depth Image Types Explained
 
