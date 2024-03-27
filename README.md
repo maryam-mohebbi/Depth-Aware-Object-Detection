@@ -1,7 +1,11 @@
 
 ## Introduction
 
-This project, undertaken as part of the "Learning from Images" course in the Master of Data Science program at Berliner Hochschule für Technik (BHT), leverages the capabilities of pre-trained models to achieve depth-aware object detection. Addressing the challenge of limited datasets that cover both depth and segmentation, and restricted computational resources, we utilize pre-trained models that have been extensively trained on large, diverse datasets. This approach enables the application of these robust models for depth estimation, object detection, and segmentation to enhance the performance of our depth-aware object detection system.
+This project, undertaken as part of the "Learning from Images" course in the Master of Data Science program at Berliner Hochschule für Technik ([BHT](https://www.bht-berlin.de/)), leverages the capabilities of pre-trained models to achieve depth-aware object detection. Addressing the challenge of limited datasets that cover both depth and segmentation, and restricted computational resources, we utilize pre-trained models that have been extensively trained on large, diverse datasets. This approach enables the application of these robust models for depth estimation, object detection, and segmentation to enhance the performance of our depth-aware object detection system.
+
+
+Before diving into the details of our project, please ensure you set up the project environment as detailed [here](#setting-up-the-project-environment). This includes installing dependencies and configuring your system to align with the project requirements.
+
 
 ## Models Used
 
@@ -66,7 +70,7 @@ The integration process involves merging the outputs of the object detection and
 </p>
 
 
-### Acknowledgments
+## Acknowledgments
 All rights are reserved for the authors of the models used in this project. We extend our gratitude to the researchers and developers behind [YOLO-NAS](https://github.com/facebookresearch/segment-anything), [SAM](https://github.com/facebookresearch/segment-anything), [Depth-Anything](https://github.com/facebookresearch/segment-anything), [MiDaS](https://github.com/facebookresearch/segment-anything), and [Monodepth2](https://github.com/facebookresearch/segment-anything) for their contributions to the field of computer vision and deep learning.
 
 ## Configuration and Setup
@@ -82,7 +86,7 @@ curl -sSL https://install.python-poetry.org | python3 -
 
 This command retrieves and executes the Poetry installation script. Complete guidelines can be find [here](https://python-poetry.org/docs/).
 
-### Setting Up the Project Environment
+### Setting Up the Project Environment 
 
 After installing Poetry, you can set up the project's environment and install its dependencies. Ensure your Python version is `3.10.10` as it is the version used for this project.
 
@@ -112,10 +116,22 @@ pip install ultralytics install super-gradients
 
 ### Pretrained Model Download
 
-Download the pretrained "Segment Anything Model" and place it in the `data/sam_weights` folder. This model is essential for the project's functionality. Use the command below to download the model:
+To ensure the project functions correctly, download the required pretrained models and place them in their respective directories within the project:
 
-```bash
-wget -c https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -P data/sam_weights/
-```
+1. **Segment Anything Model**
 
-Make sure you have the `wget` tool installed on your system to execute the download command successfully.
+   Download the pretrained "Segment Anything Model" and place it in the `data/sam_weights` folder. This model is essential for the project's functionality. Use the command below to download the model:
+
+   ```bash
+   wget -c https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -P data/sam_weights/
+   ```
+
+2. **YOLOv8 Model**
+
+   Additionally, download the pretrained YOLOv8 model from Hugging Face and save it in the `data/yolo_weights` folder. This model is crucial for object detection tasks within our project. Execute the following command to download the YOLOv8 model:
+
+   ```bash
+   wget -c https://huggingface.co/Ultralytics/YOLOv8/blob/main/yolov8n.pt -P data/yolo_weights/
+   ```
+
+Ensure you have the `wget` tool installed on your system to execute these download commands successfully.
