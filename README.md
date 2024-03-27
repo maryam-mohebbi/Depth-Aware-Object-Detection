@@ -26,6 +26,24 @@ The below image is chosen as a sample for this documentation:
   <img src="output-imgs/Seg_img-v01.jpg"/>
 </p>
 
+### Quick Start
+
+Run YOLO-NAS and SAM models on your images with the following code snippet:
+
+```python
+from da_od.config import class_names, sam_weights, test_img
+from da_od.model import SegmentDetection
+
+CLASS_NAME_PATH = class_names / "coco.names.txt"
+CHECKPOINT_PATH = sam_weights / "sam_vit_h_4b8939.pth"
+image_path = test_img / "img-v01.jpeg"
+
+segment_detector = SegmentDetection(CLASS_NAME_PATH, CHECKPOINT_PATH)
+segment_detector.configure_object_detector()
+segment_detector.detect_and_segment(image_path)
+```
+
+Note: This code can handle direct image inputs from paths and can also accept images generated from other models not stored in a path. Instead of using 'image_path', directly pass the image object to 'detect_and_segment'.
 
 ## Depth Estimation Models
 
@@ -34,10 +52,28 @@ The below image is chosen as a sample for this documentation:
   <img src="output-imgs/DA_img-v01_depth_colormap.jpg"style="width: 50%;"/><img src="output-imgs/DA_img-v01_depth_raw.jpg"style="width: 50%;"/> 
 </p>
 
+### Quick Start
+```python
+from da_od.model import DepthAnythingEstimator
+
+image_path = test_img / "img-v01.jpeg"
+DepthAnything_estimator = DepthAnythingEstimator(image_path, encoder="vits")
+DepthAnything_colored, DepthAnything_raw = DepthAnything_estimator.process_image()
+```
+
 2. **MiDaS**: [MiDaS v3.1](https://github.com/isl-org/MiDaS), trained on up to 12 different datasets (including ReDWeb, DIML, Movies, MegaDepth, WSVD, TartanAir, HRWSI, ApolloScape, BlendedMVS, IRS, KITTI, and NYU Depth V2), achieves robust monocular depth estimation across a wide range of scenarios. The model chosen here, DPT_Large, is selected for its robustness among other available models: 'DPT_Hybrid' and 'MiDaS_small'.
 <p float="left">
   <img src="output-imgs/Mi_img-v01_depth_colormap.jpg"style="width: 50%;"/><img src="output-imgs/Mi_img-v01_depth_raw.jpg"style="width: 50%;"/> 
 </p>
+
+### Quick Start
+```python
+from da_od.model import MiDaSEstimator
+
+image_path = test_img / "img-v01.jpeg"
+MiDaS_estimator = MiDaSEstimator(image_path, model_type="DPT_Large")
+MiDaS_colored, MiDaS_raw = MiDaS_estimator.process_image()
+```
 
 3. **Monodepth2**: Developed for self-supervised monocular depth prediction, [Monodepth2](https://github.com/nianticlabs/monodepth2) leverages a novel self-supervision method for depth estimation from single images. Monodepth2 enables effective depth estimation from single images without the need for depth labels, making it a practical addition to our toolkit. The "mono_640x192" model is utilized as the default for our project.
 
@@ -45,6 +81,14 @@ The below image is chosen as a sample for this documentation:
   <img src="output-imgs/Mo_img-v01_depth_colormap.jpg"style="width: 50%;"/><img src="output-imgs/Mo_img-v01_depth_raw.jpg"style="width: 50%;"/> 
 </p>
 
+### Quick Start
+```python
+from da_od.model import MonocularDepthEstimator
+
+image_path = test_img / "img-v01.jpeg"
+Monocular_estimator = MonocularDepthEstimator(image_path, model_name="mono_640x192")
+Monocular_colored, Monocular_raw = Monocular_estimator.process_image()
+```
 
 ### Implementation Details
 
