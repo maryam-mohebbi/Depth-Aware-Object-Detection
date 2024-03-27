@@ -4,7 +4,7 @@
 This project, undertaken as part of the "Learning from Images" course in the Master of Data Science program at Berliner Hochschule für Technik ([BHT](https://www.bht-berlin.de/)), leverages the capabilities of pre-trained models to achieve depth-aware object detection. Addressing the challenge of limited datasets that cover both depth and segmentation, and restricted computational resources, we utilize pre-trained models that have been extensively trained on large, diverse datasets. This approach enables the application of these robust models for depth estimation, object detection, and segmentation to enhance the performance of our depth-aware object detection system.
 
 
-Before diving into the details of our project, please ensure you set up the project environment as detailed [here](#setting-up-the-project-environment). This includes installing dependencies and configuring your system to align with the project requirements.
+Before diving into the details of our project, please ensure you set up the project environment as detailed [here](#configuration-and-setup). This includes installing dependencies and configuring your system to align with the project requirements.
 
 
 ## Models Used
@@ -18,9 +18,9 @@ The below image is chosen as a sample for this documentation:
 
 ## Object Detection and Segmentation Model
 
-- **YOLO-NAS**: [YOLOv8](https://github.com/ultralytics/ultralytics) Chosen for its optimized accuracy and low-latency inference, YOLO-NAS excels in object detection, demonstrating impressive performance on the COCO dataset, Object365 Dataset, and Roboflow100 Dataset. This balance between speed and accuracy makes it an excellent choice for our project.
+- **YOLO-NAS**: [YOLO-NAS](https://docs.ultralytics.com/models/yolo-nas/) chosen for its optimized accuracy and low-latency inference, YOLO-NAS stands out in the realm of object detection, showcasing impressive performance across various datasets such as COCO, Object365, and Roboflow100. Its remarkable balance between speed and accuracy positions it as an excellent choice for our project. YOLO-NAS is developed by Deci and leverages the capabilities of the "super_gradients" library. This library is an open-source computer vision training tool based on PyTorch, facilitating the efficient implementation of the model.
 
-- **Segment Anything Model (SAM)**: [SAM](https://github.com/facebookresearch/segment-anything) demonstrates superior zero-shot performance and has been trained on a dataset of 11 million images and 1.1 billion masks. Its capability to produce high-quality object masks from various input prompts makes it ideal for our project. The model was chosen for its adaptability in generating masks for specific objects or regions of interest, significantly surpassing previous fully supervised results in many cases.
+- **Segment Anything Model (SAM)**: [SAM](https://github.com/facebookresearch/segment-anything), with its state-of-the-art zero-shot performance, leverages a ViT-H image encoder to analyze images with unparalleled depth and accuracy. Trained on the expansive SA-1B dataset, which comprises 11 million images and 1.1 billion masks, SAM demonstrates an exceptional ability to produce high-quality object masks from a wide range of input prompts. This capability makes it exceptionally suited for our project. The model's adaptability in generating precise masks for specific objects or regions of interest marks a significant advancement over previous fully supervised methods, often surpassing them in many scenarios.
 
 <p float="left">
   <img src="output-imgs/Seg_img-v01.jpg"/>
@@ -116,22 +116,10 @@ pip install ultralytics install super-gradients
 
 ### Pretrained Model Download
 
-To ensure the project functions correctly, download the required pretrained models and place them in their respective directories within the project:
+Download the pretrained "Segment Anything Model" and place it in the `data/sam_weights` folder. This model is essential for the project's functionality. Use the command below to download the model:
 
-1. **Segment Anything Model**
-
-   Download the pretrained "Segment Anything Model" and place it in the `data/sam_weights` folder. This model is essential for the project's functionality. Use the command below to download the model:
-
-   ```bash
-   wget -c https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -P data/sam_weights/
-   ```
-
-2. **YOLOv8 Model**
-
-   Additionally, download the pretrained YOLOv8 model from Hugging Face and save it in the `data/yolo_weights` folder. This model is crucial for object detection tasks within our project. Execute the following command to download the YOLOv8 model:
-
-   ```bash
-   wget -c https://huggingface.co/Ultralytics/YOLOv8/blob/main/yolov8n.pt -P data/yolo_weights/
-   ```
+```bash
+wget -c https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -P data/sam_weights/
+```
 
 Ensure you have the `wget` tool installed on your system to execute these download commands successfully.
