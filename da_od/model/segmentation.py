@@ -425,7 +425,7 @@ class SegmentDetection:
         x_min, y_min, x_max, y_max = input_box
         cv2.rectangle(image, (int(x_min), int(y_min)), (int(x_max), int(y_max)), (0, 255, 0), 1)
 
-        text_scale = 0.3
+        text_scale = 0.8
         text_thickness = 1
         text_size = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, text_scale, text_thickness)[0]
         text_x, text_y = int(x_min), int(y_min) - 10
@@ -468,7 +468,7 @@ class SegmentDetection:
             combined_mask (np.ndarray): The combined segmentation mask for all detected objects.
             image_filename (str): The base filename for saving the output image.
         """
-        final_image = cv2.addWeighted(image, 0.7, combined_mask.astype(np.uint8), 0.3, 0)
+        final_image = cv2.addWeighted(image, 0.85, combined_mask.astype(np.uint8), 0.3, 0)
         plt.imsave(str(self.output_path / f"Seg_{image_filename}.jpg"), final_image)
 
         plt.close("all")

@@ -6,9 +6,6 @@ __pycache__/
 # Caching directories
 .mypy_cache/
 
-# Data directories
-/data
-!/depth-aware-object-detection/da-od/data
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
